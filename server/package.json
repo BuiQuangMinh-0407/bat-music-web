@@ -1,0 +1,17 @@
+{
+  "name": "bat-music-server",
+  "version": "1.0.0",
+  "description": "Backend server for BAT Music website",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.11.0",
+    "express-rate-limit": "^8.6.2",
+    "jsonwebtoken": "^9.0.3",
+    "nodemailer": "^9.0.5"
+  }
+}

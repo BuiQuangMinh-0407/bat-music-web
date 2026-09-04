@@ -1,0 +1,14 @@
+{
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://bat-music-api.onrender.com/api/:path*" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/api/:path*",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" }
+      ]
+    }
+  ]
+}
