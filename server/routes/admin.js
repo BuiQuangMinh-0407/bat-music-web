@@ -1,17 +1,35 @@
 // server/routes/admin.js
-const express = require('express');
-const router  = express.Router();
-const User    = require('../models/User');
-const Track   = require('../models/Track');
+const express   = require('express');
+const router    = express.Router();
+const jwt       = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
+const User      = require('../models/User');
+const Track     = require('../models/Track');
 const adminAuth = require('../middleware/adminAuth');
 
+// Chống brute-force mật khẩu admin (tối đa 5 lần thử sai trong 15 phút)
+const adminLoginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { success: false, message: 'Nhập sai quá nhiều lần. Vui lòng thử lại sau 15 phút.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // POST /api/admin/login — Đăng nhập admin
-router.post('/login', (req, res) => {
+router.post('/login', adminLoginLimiter, (req, res) => {
   const { password } = req.body;
-  if (password === process.env.ADMIN_PASSWORD) {
-    res.json({ success: true, token: 'bat-admin-token-2026' });
+  const adminPass = process.env.ADMIN_PASSWORD || 'bat2026';
+  
+  if (password === adminPass) {
+    const token = jwt.sign(
+      { role: 'admin' },
+      process.env.JWT_SECRET || 'bat-music-jwt-secret-2026-do-not-share',
+      { expiresIn: '7d' }
+    );
+    res.json({ success: true, token });
   } else {
-    res.status(401).json({ success: false, message: 'Sai mật khẩu' });
+    res.status(401).json({ success: false, message: 'Sai mật khẩu quản trị' });
   }
 });
 

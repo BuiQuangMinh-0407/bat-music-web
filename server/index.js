@@ -28,8 +28,13 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Cho phép requests không có origin (ví dụ mobile app, curl, postman) hoặc nằm trong danh sách
-    if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+    // Cho phép requests không có origin (ví dụ mobile, curl, webhook), localhost, hoặc bất kỳ domain Vercel nào
+    if (
+      !origin ||
+      origin.endsWith('.vercel.app') ||
+      allowedOrigins.includes(origin) ||
+      process.env.NODE_ENV !== 'production'
+    ) {
       callback(null, true);
     } else {
       callback(new Error('Chặn bởi CORS Policy'));
