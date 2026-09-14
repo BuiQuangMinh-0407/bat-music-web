@@ -23,16 +23,26 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-  const imageTypes = /jpeg|jpg|png|gif|webp/;
-  const audioTypes = /mp3|wav|ogg|m4a|flac/;
+  const imageExts = /jpeg|jpg|png|gif|webp/;
+  const audioExts = /mp3|wav|ogg|m4a|flac/;
+  const imageMimes = /^image\/(jpeg|png|gif|webp)$/;
+  const audioMimes = /^(audio\/(mpeg|wav|ogg|mp4|x-m4a|flac|x-wav)|video\/mp4)$/;
   const ext = path.extname(file.originalname).toLowerCase().slice(1);
 
-  if (file.fieldname === 'image' && imageTypes.test(ext)) {
-    cb(null, true);
-  } else if (file.fieldname === 'audio' && audioTypes.test(ext)) {
-    cb(null, true);
+  if (file.fieldname === 'image') {
+    if (imageExts.test(ext) && imageMimes.test(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`File ảnh không hợp lệ (MIME: ${file.mimetype}). Chỉ chấp nhận jpg, png, gif, webp`));
+    }
+  } else if (file.fieldname === 'audio') {
+    if (audioExts.test(ext) && audioMimes.test(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`File audio không hợp lệ (MIME: ${file.mimetype}). Chỉ chấp nhận mp3, wav, ogg, m4a, flac`));
+    }
   } else {
-    cb(new Error(`File không hợp lệ: ${file.originalname}`));
+    cb(new Error(`Loại file không được hỗ trợ: ${file.fieldname}`));
   }
 };
 

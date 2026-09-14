@@ -32,7 +32,7 @@ export function useUnlock() {
 
   /** Mở khoá 1 track — lưu lên server (vĩnh viễn) */
   const unlock = useCallback(
-    async (trackId) => {
+    async (trackId, orderCode = null) => {
       if (!isLoggedIn || !token) return;
 
       // Cập nhật UI ngay lập tức
@@ -50,7 +50,7 @@ export function useUnlock() {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ trackId }),
+          body: JSON.stringify({ trackId, orderCode }),
         });
         const data = await res.json();
         if (data.success && data.unlockedTracks) {

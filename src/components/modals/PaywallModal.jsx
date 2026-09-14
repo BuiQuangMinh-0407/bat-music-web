@@ -101,13 +101,14 @@ export default function PaywallModal({ track, tracks = [], onClose, onUnlock }) 
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`${API}/payment/check/${orderCode}`);
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const res = await fetch(`${API}/payment/check/${orderCode}`, { headers });
         const data = await res.json();
         if (data.success && data.status === 'paid' && isMounted) {
           setPaymentStatus('paid');
           clearInterval(interval);
           setTimeout(() => {
-            targetTracks.forEach((t) => onUnlock(t.id ?? t._id));
+            targetTracks.forEach((t) => onUnlock(t.id ?? t._id, orderCode));
             onClose();
           }, 1200);
         }

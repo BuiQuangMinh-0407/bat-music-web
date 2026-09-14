@@ -36,7 +36,7 @@ router.get('/:id/download', authMiddleware, async (req, res) => {
   }
 });
 
-// GET /api/tracks — lấy tất cả bài hát
+// GET /api/tracks — lấy tất cả bài hát (công khai — chỉ trả previewUrl, ẩn audioUrl gốc)
 router.get('/', async (req, res) => {
   try {
     const { genre, featured } = req.query;
@@ -45,7 +45,14 @@ router.get('/', async (req, res) => {
     if (featured === 'true') filter.featured = true;
 
     const tracks = await Track.find(filter).sort({ createdAt: -1 });
-    res.json({ success: true, data: tracks });
+
+    const safeTracks = tracks.map(t => {
+      const obj = t.toObject();
+      obj.previewUrl = obj.audioUrl;
+      return obj;
+    });
+
+    res.json({ success: true, data: safeTracks });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

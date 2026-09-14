@@ -7,6 +7,7 @@ dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
 const express  = require('express');
 const mongoose = require('mongoose');
 const cors     = require('cors');
+const helmet   = require('helmet');
 const path     = require('path');
 
 const tracksRouter = require('./routes/tracks');
@@ -42,6 +43,7 @@ app.use(cors({
   },
   credentials: true,
 }));
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } })); // Fix #6: Bảo vệ HTTP headers
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

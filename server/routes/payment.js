@@ -1,11 +1,21 @@
-const express = require('express');
-const router = express.Router();
-const Order = require('../models/Order');
-const User = require('../models/User');
+const express   = require('express');
+const router    = express.Router();
+const rateLimit = require('express-rate-limit');
+const Order     = require('../models/Order');
+const User      = require('../models/User');
 const { authMiddleware } = require('./auth');
 
+// Fix #5: Rate limit chống spam tạo đơn hàng (tối đa 5 đơn / 5 phút)
+const paymentLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 5,
+  message: { success: false, message: 'Tạo đơn hàng quá nhanh. Vui lòng chờ 5 phút.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // POST /create-order
-router.post('/create-order', authMiddleware, async (req, res) => {
+router.post('/create-order', authMiddleware, paymentLimiter, async (req, res) => {
   try {
     let { amount, trackIds } = req.body;
     if (!trackIds || trackIds.length === 0) {
@@ -85,14 +95,14 @@ router.post('/sepay-webhook', async (req, res) => {
   }
 });
 
-// GET /check/:orderCode
-router.get('/check/:orderCode', async (req, res) => {
+// Fix #4: GET /check/:orderCode — BẮT BUỘC đăng nhập + kiểm tra chủ sở hữu
+router.get('/check/:orderCode', authMiddleware, async (req, res) => {
   try {
     const { orderCode } = req.params;
-    const order = await Order.findOne({ orderCode });
+    const order = await Order.findOne({ orderCode, userId: req.userId });
     
     if (!order) {
-      return res.status(404).json({ success: false, message: 'Order not found' });
+      return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng' });
     }
 
     res.json({

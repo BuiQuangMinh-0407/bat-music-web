@@ -223,46 +223,14 @@ router.post('/facebook', authLimiter, async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// ĐĂNG NHẬP BẰNG SOCIAL GENERIC
+// ĐĂNG NHẬP BẰNG SOCIAL GENERIC — ĐÃ VÔ HIỆU HÓA VÌ LÝ DO BẢO MẬT
+// Sử dụng /google hoặc /facebook thay thế (có xác thực token thật)
 // ══════════════════════════════════════════════════════════════════════════════
-router.post('/social', authLimiter, async (req, res) => {
-  try {
-    const { name, email, avatar, provider, providerId } = req.body;
-
-    if (!email || !provider || !providerId) {
-      return res.status(400).json({ success: false, message: 'Thiếu thông tin đăng nhập' });
-    }
-
-    // Tìm user đã có hoặc tạo mới
-    let user = await User.findOne({
-      $or: [
-        { provider, providerId },
-        { email },
-      ],
-    });
-
-    if (user) {
-      // Cập nhật avatar nếu có
-      if (avatar && avatar !== user.avatar) {
-        user.avatar = avatar;
-        await user.save();
-      }
-    } else {
-      // Tạo mới
-      user = await User.create({
-        name:       name || email.split('@')[0],
-        email,
-        avatar:     avatar || '',
-        provider,
-        providerId,
-      });
-    }
-
-    const token = signToken(user);
-    res.json({ success: true, token, user: user.toSafeJSON() });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
-  }
+router.post('/social', (req, res) => {
+  return res.status(403).json({
+    success: false,
+    message: 'Endpoint này đã bị vô hiệu hoá vì lý do bảo mật. Vui lòng dùng /api/auth/google hoặc /api/auth/facebook.',
+  });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -310,8 +278,9 @@ router.post('/forgot-password', authLimiter, async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Mã xác nhận đã được gửi đến email của bạn',
-      code: emailResult.mode === 'demo' ? resetCode : undefined,
+      message: emailResult.mode === 'demo'
+        ? 'Hệ thống email chưa được cấu hình. Vui lòng liên hệ admin qua Zalo 0389445060.'
+        : 'Mã xác nhận đã được gửi đến email của bạn',
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -355,18 +324,43 @@ router.post('/reset-password', authLimiter, async (req, res) => {
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
-// MỞ KHOÁ TRACK (cần đăng nhập)
+// MỞ KHOÁ TRACK (cần đăng nhập + phải có đơn hàng đã thanh toán thật)
 // ══════════════════════════════════════════════════════════════════════════════
 router.post('/unlock-track', authMiddleware, async (req, res) => {
   try {
-    const { trackId } = req.body;
-    const user = await User.findById(req.userId);
-    if (!user) return res.status(404).json({ success: false });
+    const { trackId, orderCode } = req.body;
+    if (!trackId) return res.status(400).json({ success: false, message: 'Thiếu trackId' });
 
-    if (!user.unlockedTracks.includes(trackId)) {
-      user.unlockedTracks.push(trackId);
-      await user.save();
+    const user = await User.findById(req.userId);
+    if (!user) return res.status(404).json({ success: false, message: 'User không tồn tại' });
+
+    // Nếu đã mở khoá rồi thì trả về luôn
+    if (user.unlockedTracks.map(String).includes(trackId)) {
+      return res.json({ success: true, unlockedTracks: user.unlockedTracks });
     }
+
+    // BẮT BUỘC phải có orderCode và đơn hàng đã thanh toán thật qua SePay
+    if (!orderCode) {
+      return res.status(400).json({ success: false, message: 'Thiếu mã đơn hàng. Vui lòng thanh toán trước.' });
+    }
+
+    const Order = require('../models/Order');
+    const order = await Order.findOne({
+      orderCode,
+      userId: req.userId,
+      status: 'paid',
+    });
+
+    if (!order) {
+      return res.status(403).json({ success: false, message: 'Đơn hàng chưa thanh toán hoặc không hợp lệ' });
+    }
+
+    if (!order.trackIds.map(String).includes(trackId)) {
+      return res.status(403).json({ success: false, message: 'Bài hát không nằm trong đơn hàng này' });
+    }
+
+    user.unlockedTracks.push(trackId);
+    await user.save();
 
     res.json({ success: true, unlockedTracks: user.unlockedTracks });
   } catch (err) {
